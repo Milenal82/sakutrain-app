@@ -336,6 +336,30 @@ jobs:
           path.write_text(content)
           print("JavaScript bundling enabled")
           PY
+          
+      # 修复 React Native 版本被错误升级的问题
+      - name: Pin React Native Android dependency
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle")
+          content = path.read_text()
+
+          old = 'implementation "com.facebook.react:react-native:+"'
+          new = 'implementation "com.facebook.react:react-native:0.64.2"'
+
+          if old not in content:
+              raise RuntimeError(
+                  "Cannot find dynamic React Native dependency"
+              )
+
+          content = content.replace(old, new, 1)
+          path.write_text(content)
+
+          print("React Native dependency pinned to 0.64.2")
+          PY
+
 
       # 12. 检查环境
       - name: Check build environment
