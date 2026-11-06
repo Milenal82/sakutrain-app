@@ -61,6 +61,43 @@ jobs:
 
       # 8. 让 Debug APK 包含 JavaScript Bundle
       # 避免安装后必须连接 Metro 开发服务器
+      
+      # 修复 Sakutrain 旧版 Maven 依赖
+      - name: Fix legacy Maven repositories
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/build.gradle")
+          content = path.read_text()
+
+          # 优先使用 Maven Central
+          content = content.replace(
+              "        jcenter()",
+              "        mavenCentral()\n        jcenter()"
+          )
+
+          # 为旧视频组件补充历史仓库
+          marker = "        maven { url 'https://www.jitpack.io' }"
+
+          extra = """
+                  maven {
+                      url "https://repository.mulesoft.org/nexus/content/repositories/public/"
+                  }
+                  maven {
+                      url "https://maven.wso2.org/nexus/content/repositories/public/"
+                  }
+          """
+
+          if marker not in content:
+              raise RuntimeError("Cannot find JitPack repository")
+
+          content = content.replace(marker, extra + marker)
+          path.write_text(content)
+
+          print("Maven repositories updated")
+          PY
+
       - name: Enable JavaScript bundling
         run: |
           sed -i '/project.ext.react = \[/a\        bundleInDebug: true,' android/app/build.gradle
