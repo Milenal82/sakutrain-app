@@ -1,3 +1,4 @@
+
 name: Build Sakutrain APK
 
 on:
@@ -9,47 +10,68 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 90
+
     steps:
-      - name: Checkout this repository
+      # 1. 获取仓库源码
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      # 2. 配置 Node.js 16
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '16.20.2'
 
-      - name: Set up Java 11
-        uses: actions/setup-java@v4
+      # 3. 配置 JDK 17，用于 Android SDK 安装
+      - name: Setup Java 17 for Android SDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 4. 安装 Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 5. 安装旧项目需要的 Android SDK 组件
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+
+          sdkmanager \
+            "platforms;android-29" \
+            "build-tools;29.0.3" \
+            "ndk;20.1.5948944"
+
+      # 6. 切换到 JDK 11，兼容 Gradle 6.7
+      - name: Setup Java 11 for Gradle
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '11'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK components
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-29' 'build-tools;29.0.3' 'ndk;20.1.5948944'
-
+      # 7. 安装 JavaScript 依赖
       - name: Install JavaScript dependencies
         run: |
-          corepack enable || true
           npm install --global yarn@1.22.22
           yarn install --network-timeout 600000
 
-      - name: Bundle JavaScript in Debug APK
+      # 8. 让 Debug APK 包含 JavaScript Bundle
+      # 避免安装后必须连接 Metro 开发服务器
+      - name: Enable JavaScript bundling
         run: |
           sed -i '/project.ext.react = \[/a\        bundleInDebug: true,' android/app/build.gradle
 
-      - name: Build APK
+      # 9. 编译 APK
+      - name: Build Sakutrain APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK
+      # 10. 上传 APK
+      - name: Upload Sakutrain APK
         uses: actions/upload-artifact@v4
         with:
           name: Sakutrain-APK
