@@ -1,0 +1,58 @@
+name: Build Sakutrain APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-29' 'build-tools;29.0.3' 'ndk;20.1.5948944'
+
+      - name: Install JavaScript dependencies
+        run: |
+          corepack enable || true
+          npm install --global yarn@1.22.22
+          yarn install --network-timeout 600000
+
+      - name: Bundle JavaScript in Debug APK
+        run: |
+          sed -i '/project.ext.react = \[/a\        bundleInDebug: true,' android/app/build.gradle
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sakutrain-APK
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
