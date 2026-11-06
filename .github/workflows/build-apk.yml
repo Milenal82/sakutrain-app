@@ -33,6 +33,8 @@ jobs:
       # 4. 安装 Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       # 5. 安装旧项目需要的 Android SDK 组件
       - name: Install Android SDK components
