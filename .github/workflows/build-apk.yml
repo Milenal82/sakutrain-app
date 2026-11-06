@@ -359,6 +359,34 @@ jobs:
 
           print("React Native dependency pinned to 0.64.2")
           PY
+          
+      # 统一锁定整个 Android 项目的 React Native 版本
+      - name: Force React Native 0.64.2 globally
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/build.gradle")
+          content = path.read_text()
+
+          # 所有子项目统一固定 React Native Android 依赖版本
+          rule = """
+          allprojects {
+              configurations.all {
+                  resolutionStrategy {
+                      force 'com.facebook.react:react-native:0.64.2'
+                  }
+              }
+          }
+          """
+
+          if "force 'com.facebook.react:react-native:0.64.2'" not in content:
+              content += "\n" + rule
+
+          path.write_text(content)
+          print("React Native 0.64.2 forced across all projects")
+          PY
+
 
 
       # 12. 检查环境
